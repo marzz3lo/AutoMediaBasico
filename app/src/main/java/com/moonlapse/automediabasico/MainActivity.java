@@ -55,6 +55,17 @@ public class MainActivity extends AppCompatActivity {
         public void onResponse(String response) {
             musica = gson.fromJson(response, Musica.class);
             Log.d(TAG, "Número de pistas de audio: " + musica.getMusica().size());
+
+            int slashPos = URL.lastIndexOf('/');
+            String path = URL.substring(0, slashPos + 1);
+
+            for (int i = 0; i < musica.getMusica().size(); i++) {
+                PistaAudio pista = musica.getMusica().get(i);
+                if (!pista.getSource().startsWith("http"))
+                    pista.setSource(path + pista.getSource());
+                if (!pista.getImage().startsWith("http")) pista.setImage(path + pista.getImage());
+                musica.getMusica().set(i, pista);
+            }
         }
     };
     private final Response.ErrorListener onPostsError = new Response.ErrorListener() {
