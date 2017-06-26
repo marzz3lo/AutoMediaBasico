@@ -13,13 +13,16 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = MainActivity.this.getClass().getSimpleName();
     private final String URL = "http://storage.googleapis.com/automotive-media/music.json";
     private RequestQueue requestQueue;
     private TextView txtLog;
-
+    private Gson gson;
+    private Musica musica;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -27,6 +30,10 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         requestQueue = Volley.newRequestQueue(this);
         txtLog = (TextView) findViewById(R.id.txtLog);
+
+        GsonBuilder gsonBuilder = new GsonBuilder();
+        gson = gsonBuilder.create();
+
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.floatingActionButton);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -46,8 +53,8 @@ public class MainActivity extends AppCompatActivity {
     private final Response.Listener<String> onPostsLoaded = new Response.Listener<String>() {
         @Override
         public void onResponse(String response) {
-            Log.i(TAG, response);
-            txtLog.setText(response);
+            musica = gson.fromJson(response, Musica.class);
+            Log.d(TAG, "Número de pistas de audio: " + musica.getMusica().size());
         }
     };
     private final Response.ErrorListener onPostsError = new Response.ErrorListener() {
@@ -57,4 +64,6 @@ public class MainActivity extends AppCompatActivity {
             txtLog.setText(error.toString());
         }
     };
+
+
 }
