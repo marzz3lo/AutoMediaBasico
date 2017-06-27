@@ -47,6 +47,8 @@ public class ServicioMusicBrowserTest extends MediaBrowserService {
         requestQueue = Volley.newRequestQueue(this);
         GsonBuilder gsonBuilder = new GsonBuilder();
         gson = gsonBuilder.create();
+        mMusic = new ArrayList<MediaMetadata>();
+
         getRepositorioMusical();
 
 //        mMusic = new ArrayList<MediaMetadata>();
@@ -108,9 +110,7 @@ public class ServicioMusicBrowserTest extends MediaBrowserService {
 
             @Override
             public void onSeekTo(long pos) {
-                if (pos >= mPlayer.getCurrentPosition()){
-                    onSkipToNext();
-                }
+                mPlayer.seekTo((int) pos);
             }
 
             @Override
@@ -134,33 +134,40 @@ public class ServicioMusicBrowserTest extends MediaBrowserService {
     }
 
     private void handlePlay() {
-        mPlayer.seekTo(0);
-        mSession.setPlaybackState(buildState(PlaybackState.STATE_PLAYING));
+        mSession.setPlaybackState(buildState(PlaybackState.STATE_PAUSED));
         mSession.setMetadata(mCurrentTrack);
         try {
-            mPlayer.reset();
             mPlayer.seekTo(0);
-            mPlayer.setDataSource(ServicioMusicBrowserTest.this, Uri.parse(mCurrentTrack.getDescription().getMediaId()));
+            mPlayer.reset();
+            mPlayer.setDataSource(ServicioMusicBrowserTest.this,
+                    Uri.parse(mCurrentTrack.getDescription().getMediaId()));
+            mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                @Override
+                public void onCompletion(MediaPlayer mp) {
+                    mSession.setPlaybackState(buildState(PlaybackState.STATE_PAUSED));
+                    int cancionSiguiente = mMusic.indexOf(mCurrentTrack) +1;
+                    if (cancionSiguiente == mMusic.size()){
+                        mCurrentTrack = mMusic.get(0);
+                        handlePlay();
+                    }else{
+                        mCurrentTrack = mMusic.get(cancionSiguiente);
+                        handlePlay();
+                    }
+                }
+            });
+            mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
+                @Override
+                public void onPrepared(MediaPlayer mediaPlayer) {
+                    mediaPlayer.seekTo(0);
+                    mediaPlayer.start();
+                    mSession.setPlaybackState(buildState(PlaybackState.STATE_PLAYING));
+                }
+            });
+            mPlayer.prepareAsync();
         } catch (IOException e) {
             e.printStackTrace();
         }
 
-        mPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-            @Override
-            public void onCompletion(MediaPlayer mp) {
-                mp.seekTo(0);
-                mSession.setPlaybackState(buildState(PlaybackState.STATE_STOPPED));
-            }
-        });
-
-
-        mPlayer.setOnPreparedListener(new MediaPlayer.OnPreparedListener() {
-            @Override
-            public void onPrepared(MediaPlayer mediaPlayer) {
-                mediaPlayer.start();
-            }
-        });
-        mPlayer.prepareAsync();
     }
 
     @Override
@@ -191,7 +198,6 @@ public class ServicioMusicBrowserTest extends MediaBrowserService {
         @Override
         public void onResponse(String response) {
             musica = gson.fromJson(response, Musica.class);
-            Log.d(TAG, "Número de pistas de audio: " + musica.getMusica().size());
 
             int slashPos = URL.lastIndexOf('/');
             String path = URL.substring(0, slashPos + 1);
